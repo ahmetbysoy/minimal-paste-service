@@ -1,0 +1,11 @@
+{
+  "name": "minimal-paste-service",
+  "version": "1.0.0",
+  "description": "24-hour minimal paste service with Vercel Blob",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@vercel/blob": "^0.23.4"
+  }
+}
