@@ -1,0 +1,54 @@
+name: Cleanup Expired Pastes
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # Every 30 minutes
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Vercel Blob
+        run: npm install @vercel/blob
+
+      - name: Run Cleanup Script
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: |
+          node -e "
+          const { list, del } = require('@vercel/blob');
+          async function cleanup() {
+            try {
+              const { blobs } = await list({ prefix: 'pastes/' });
+              const now = new Date();
+              let deletedCount = 0;
+              for (const blob of blobs) {
+                try {
+                  const res = await fetch(blob.url);
+                  const data = await res.json();
+                  if (new Date(data.expiresAt) <= now) {
+                    await del(blob.url);
+                    deletedCount++;
+                    console.log('Deleted expired:', blob.pathname);
+                  }
+                } catch (e) {
+                  console.log('Skipping invalid blob:', blob.pathname);
+                }
+              }
+              console.log('Cleanup complete. Deleted:', deletedCount);
+            } catch (error) {
+              console.error('Cleanup failed:', error.message);
+              process.exit(1);
+            }
+          }
+          cleanup();
+          "
